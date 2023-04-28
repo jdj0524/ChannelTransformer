@@ -7,22 +7,23 @@ class ResBlock(torch.nn.Module):
         self.block1 = torch.nn.Sequential(
             torch.nn.Conv2d(in_channels=in_channels, out_channels=in_channels * 2, kernel_size=(3,3), padding='same'),
             torch.nn.BatchNorm2d(in_channels * 2),
-            torch.nn.LeakyReLU()
+            torch.nn.GELU()
         )
         
         self.block2 = torch.nn.Sequential(
             torch.nn.Conv2d(in_channels=in_channels * 2, out_channels=in_channels * 4, kernel_size=(3,3), padding='same'),
             torch.nn.BatchNorm2d(in_channels * 4),
-            torch.nn.LeakyReLU()
+            torch.nn.GELU()
         )
         
         self.block3 = torch.nn.Sequential(
             torch.nn.Conv2d(in_channels=in_channels * 4, out_channels=out_channels, kernel_size=(3,3), padding='same'),
             torch.nn.BatchNorm2d(out_channels),
         )
-        self.out_activation = torch.nn.LeakyReLU()
+        self.skip_conv = torch.nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=(1,1), padding='same')
+        self.out_activation = torch.nn.GELU()
     def forward(self, x):
-        skip = x
+        skip = self.skip_conv(x)
         x = self.block1(x)
         x = self.block2(x)
         x = self.block3(x) + skip
@@ -36,14 +37,17 @@ class SelfAttention2D(torch.nn.Module):
         self.value_conv = torch.nn.Conv2d(in_channels=channels, out_channels=channels, kernel_size=(1,1))
         self.query_conv = torch.nn.Conv2d(in_channels=channels, out_channels=channels, kernel_size=(1,1))
         self.out_conv = torch.nn.Conv2d(in_channels=channels, out_channels=channels, kernel_size=(1,1))
-        self.softmax = torch.nn.Softmax(dim=0)
+        self.softmax = torch.nn.Softmax(dim=(1))
     
     def forward(self, x):
         key = self.key_conv(x)
         query = self.query_conv(x)
         value = self.value_conv(x)
-        
-        attention_map = self.softmax(torch.matmul(torch.transpose(key, -1, -2), query))
+        attention_map = torch.matmul(torch.transpose(key, -1, -2), query)
+        _, channel, dim1, dim2 = attention_map.shape
+        attention_map = rearrange(attention_map, 'b channel dim1 dim2 -> b (channel dim1 dim2)')
+        attention_map = self.softmax(attention_map)
+        attention_map = rearrange(attention_map, 'b (channel dim1 dim2) -> b channel dim1 dim2', channel = channel, dim1 = dim1, dim2 = dim2)
         output = torch.matmul(value, attention_map)
         output = self.out_conv(output)
         output = output + x
@@ -54,26 +58,26 @@ class CSINet(torch.nn.Module):
         super().__init__(*args, **kwargs)
         self.n_tx = n_tx
         self.n_rx = n_rx
-        self.c = in_channels * 2
-        self.input_conv = torch.nn.Conv2d(in_channels=in_channels*2, out_channels=in_channels*2, kernel_size=(3,3), padding = 'same')
+        self.c = in_channels
+        self.input_conv = torch.nn.Conv2d(in_channels=2, out_channels=2, kernel_size=(3,3), padding = 'same')
         self.input_dense = torch.nn.Linear(in_features=n_tx*n_rx*in_channels*2, out_features=dim_feedback)
         self.output_dense = torch.nn.Linear(in_features=dim_feedback, out_features=n_tx*n_rx*in_channels*2)
         self.resblocks = torch.nn.ModuleList()
         self.out_activation = torch.nn.Tanh()
         for i in range(no_blocks):
-            self.resblocks.append(ResBlock(in_channels=in_channels*2, out_channels=in_channels*2))
+            self.resblocks.append(ResBlock(in_channels=2, out_channels=2))
     
     def forward(self,x):
-        x = rearrange(x, 'b ntx nrx c -> b c ntx nrx ')
+        x = rearrange(x, 'b ntx nrx c complex -> b complex c (ntx nrx) ')
         x = self.input_conv(x)
-        x = rearrange(x, 'b ntx nrx c -> b (ntx nrx c)')
+        x = rearrange(x, 'b complex c nant -> b (complex c nant)')
         x = self.input_dense(x)
         x = self.output_dense(x)
-        x = rearrange(x, 'b (ntx nrx c) -> b c ntx nrx', ntx = self.n_tx, nrx = self.n_rx, c = self.c)
+        x = rearrange(x, 'b (complex c nant) -> b complex c nant', nant = self.n_tx * self.n_rx, c = self.c, complex = 2)
         for block in self.resblocks:
             x = block(x)
-        x = rearrange(x, 'b c ntx nrx -> b ntx nrx c')
-        x = self.out_activation(x)
+        x = rearrange(x, 'b complex c (ntx nrx) -> b ntx nrx c complex', ntx = self.n_tx, nrx = self.n_rx, c = self.c, complex = 2)
+        # x = self.out_activation(x)
         return x
         
 class ChannelAttention(torch.nn.Module):
@@ -81,33 +85,46 @@ class ChannelAttention(torch.nn.Module):
         super().__init__(*args, **kwargs)
         self.n_tx = n_tx
         self.n_rx = n_rx
-        self.c = in_channels * 2
-        self.input_conv = torch.nn.Conv2d(in_channels=in_channels*2, out_channels=in_channels*2, kernel_size=(3,3), padding = 'same')
+        self.c = in_channels
+        self.input_conv = torch.nn.Conv2d(in_channels=2, out_channels=2, kernel_size=(3,3), padding = 'same')
         self.input_dense = torch.nn.Linear(in_features=n_tx*n_rx*in_channels*2, out_features=dim_feedback)
         self.output_dense = torch.nn.Linear(in_features=dim_feedback, out_features=n_tx*n_rx*in_channels*2)
-        self.resblocks = torch.nn.ModuleList()
-        for i in range(no_blocks):
-            self.resblocks.append(ResBlock(in_channels=in_channels*2, out_channels=in_channels*2))
+        self.input_block_1 = ResBlock(in_channels=2, out_channels=2)
+        self.input_block_2 = ResBlock(in_channels=2, out_channels=2)
+        self.input_block_3 = ResBlock(in_channels=2, out_channels=2)
+        # self.input_block_4 = ResBlock(in_channels=2, out_channels=2)
+        # self.input_block_5 = ResBlock(in_channels=2, out_channels=2)
+        # self.input_block_6 = ResBlock(in_channels=2, out_channels=2)
+        # self.input_block_7 = ResBlock(in_channels=2, out_channels=2)
+        # self.input_block_4 = ResBlock(in_channels=32, out_channels=2)
+        self.out_conv_1 = torch.nn.Conv2d(in_channels=2, out_channels=1, kernel_size=(3,3), padding='same')
+        self.out_conv_2 = torch.nn.Conv2d(in_channels=2, out_channels=1, kernel_size=(3,3), padding='same')
         
-        self.attention = torch.nn.ModuleList()
-        for i in range(2):
-            self.attention.append(SelfAttention2D(channels = in_channels * 2))
-        self.out_activation = torch.nn.Tanh()
+        self.attention_1 = SelfAttention2D(channels = 2)
+        self.attention_2 = SelfAttention2D(channels = 2)
+        
+        self.in_activation = torch.nn.Tanh()
     def forward(self,x):
-        x = rearrange(x, 'b ntx nrx c -> b c ntx nrx ')
-        x = self.input_conv(x)
-        x = rearrange(x, 'b ntx nrx c -> b (ntx nrx c)')
+        x = rearrange(x, 'b ntx nrx c complex -> b complex c (ntx nrx) ')
+        # x = self.input_conv(x)
+        x = rearrange(x, 'b complex c nant -> b (complex c nant)')
         x = self.input_dense(x)
+        x = x / torch.max(torch.abs(x), dim = 0, keepdim = True).values
         x = self.output_dense(x)
-        x = rearrange(x, 'b (ntx nrx c) -> b c ntx nrx', ntx = self.n_tx, nrx = self.n_rx, c = self.c)
-        for i, block in enumerate(self.resblocks):
-            x = block(x)
-            if i == 0 or i == 3:
-                x = self.attention[i%2](x)
+        x = rearrange(x, 'b (complex c nant) -> b complex c nant', nant = self.n_tx * self.n_rx, c = self.c, complex = 2)
+        x = self.input_block_1(x)
+        x = self.attention_1(x)
+        x = self.input_block_2(x)
+        x = self.attention_2(x)
+        x = self.input_block_3(x)
         
-                
-        x = rearrange(x, 'b c ntx nrx -> b ntx nrx c')
-        x = self.out_activation(x)
+        real = self.out_conv_1(x)
+        imag = self.out_conv_2(x)
+        
+        x = torch.cat([real,imag], dim=1)
+        # x = self.input_block_4(x)
+        x = rearrange(x, 'b complex c (ntx nrx) -> b ntx nrx c complex', ntx = self.n_tx, nrx = self.n_rx, c = self.c, complex = 2)
+        # x = self.out_activation(x)
         return x
         
         

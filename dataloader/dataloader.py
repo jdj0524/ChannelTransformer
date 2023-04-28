@@ -28,11 +28,9 @@ class DeepMIMODataset(torch.utils.data.Dataset):
 class DeepMIMOSampleDataset(torch.utils.data.Dataset):
     def __init__(
         self, files_dir = '/mnt/d/DeepMIMO_datasets/O1_3p5/samples/', 
-        target_file = '*.npy'
         ) -> None:
         super().__init__()
         self.files_dir = files_dir
-        self.target_file = target_file
         self.data = None
         self.build()
         
@@ -45,11 +43,11 @@ class DeepMIMOSampleDataset(torch.utils.data.Dataset):
     def __getitem__(self,idx):
         cur_data =np.load(os.path.join(self.files_dir, self.data[idx]+'.npy'))
         
-        cur_data = cur_data / np.abs(cur_data).max(keepdims = True)
+        cur_data = cur_data / (np.abs(cur_data).max(keepdims = True) + 1e-9)
         
         # cur_data = cur_data / np.abs(cur_data).mean(keepdims = True)
         
-        cur_data = np.concatenate([cur_data.real, cur_data.imag], axis = 2)
+        cur_data = np.stack([cur_data.real, cur_data.imag], axis = -1)
         
         return cur_data
     

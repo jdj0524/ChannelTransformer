@@ -8,8 +8,8 @@ def MSE_loss(output, target):
 
 def NMSE_loss(output, target):
     channel_dim = output.shape[-1] // 2
-    output = output[:,:,:,:channel_dim] + 1j * output[:,:,:,channel_dim:]
-    target = target[:,:,:,:channel_dim] + 1j * target[:,:,:,channel_dim:]
+    output = output[:,:,:,:,0] + 1j * output[:,:,:,:,1]
+    target = target[:,:,:,:,0] + 1j * target[:,:,:,:,1]
     
     mse = (torch.abs(output - target)**2).sum(dim = (1,2))
     
@@ -19,8 +19,8 @@ def NMSE_loss(output, target):
 
 def Cosine_distance(output, target):
     channel_dim = output.shape[-1] // 2
-    output = output[:,:,:,:channel_dim] + 1j * output[:,:,:,channel_dim:]
-    target = target[:,:,:,:channel_dim] + 1j * target[:,:,:,channel_dim:]
+    output = output[:,:,:,:,0] + 1j * output[:,:,:,:,1]
+    target = target[:,:,:,:,0] + 1j * target[:,:,:,:,1]
     
     inner_product = torch.abs(torch.sum(torch.conj(output) * target, dim = (1,2)))
     target_norm = torch.abs(torch.sqrt((target * torch.conj(target)).sum(dim = (1,2))))
