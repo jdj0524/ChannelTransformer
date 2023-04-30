@@ -1,8 +1,8 @@
 import torch
-from models.transformer import ChannelTransformerBase, ChannelTransformer, ChannelTransformerSimple
-from models.csinet import CSINet, ChannelAttention
-from loss.nmse import NMSE_loss, Cosine_distance, MSE_loss
-from dataloader.dataloader import DeepMIMODataset, DeepMIMOSampleDataset
+from pytorch.models.transformer import ChannelTransformerBase, ChannelTransformer, ChannelTransformerSimple
+from pytorch.models.csinet import CSINet, ChannelAttention
+from pytorch.loss.nmse import NMSE_loss, Cosine_distance, MSE_loss
+from pytorch.dataloader.dataloader import DeepMIMODataset, DeepMIMOSampleDataset
 from torch.utils.data import DataLoader
 from torch.nn import MSELoss
 from torch.optim import Adam, AdamW
