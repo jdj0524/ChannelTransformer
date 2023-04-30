@@ -54,14 +54,14 @@ class SelfAttention2D(torch.nn.Module):
         return output
         
 class CSINet(torch.nn.Module):
-    def __init__(self, dim_feedback, n_tx, n_rx, in_channels, no_blocks, *args, **kwargs) -> None:
+    def __init__(self, dim_feedback, n_tx, n_rx, n_carrier, no_blocks, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.n_tx = n_tx
         self.n_rx = n_rx
-        self.c = in_channels
+        self.c = n_carrier
         self.input_conv = torch.nn.Conv2d(in_channels=2, out_channels=2, kernel_size=(3,3), padding = 'same')
-        self.input_dense = torch.nn.Linear(in_features=n_tx*n_rx*in_channels*2, out_features=dim_feedback)
-        self.output_dense = torch.nn.Linear(in_features=dim_feedback, out_features=n_tx*n_rx*in_channels*2)
+        self.input_dense = torch.nn.Linear(in_features=n_tx*n_rx*n_carrier*2, out_features=dim_feedback)
+        self.output_dense = torch.nn.Linear(in_features=dim_feedback, out_features=n_tx*n_rx*n_carrier*2)
         self.resblocks = torch.nn.ModuleList()
         self.out_activation = torch.nn.Tanh()
         for i in range(no_blocks):
@@ -81,14 +81,14 @@ class CSINet(torch.nn.Module):
         return x
         
 class ChannelAttention(torch.nn.Module):
-    def __init__(self, dim_feedback, n_tx, n_rx, in_channels, no_blocks, *args, **kwargs) -> None:
+    def __init__(self, dim_feedback, n_tx, n_rx, n_carrier, no_blocks, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.n_tx = n_tx
         self.n_rx = n_rx
-        self.c = in_channels
+        self.c = n_carrier
         self.input_conv = torch.nn.Conv2d(in_channels=2, out_channels=2, kernel_size=(3,3), padding = 'same')
-        self.input_dense = torch.nn.Linear(in_features=n_tx*n_rx*in_channels*2, out_features=dim_feedback)
-        self.output_dense = torch.nn.Linear(in_features=dim_feedback, out_features=n_tx*n_rx*in_channels*2)
+        self.input_dense = torch.nn.Linear(in_features=n_tx*n_rx*n_carrier*2, out_features=dim_feedback)
+        self.output_dense = torch.nn.Linear(in_features=dim_feedback, out_features=n_tx*n_rx*n_carrier*2)
         self.input_block_1 = ResBlock(in_channels=2, out_channels=2)
         self.input_block_2 = ResBlock(in_channels=2, out_channels=2)
         self.input_block_3 = ResBlock(in_channels=2, out_channels=2)
