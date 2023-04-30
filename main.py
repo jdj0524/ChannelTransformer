@@ -10,12 +10,8 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from pytorch_optimizer import Ranger21
 
-from ptflops import get_model_complexity_info
-from pthflops import count_ops
-
 import numpy as np
 from sklearn import preprocessing
-from flopth import flopth
 
 from fvcore.nn import flop_count, FlopCountAnalysis
 # from distributed.distributed import setup_ddp, cleanup
