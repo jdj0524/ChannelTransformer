@@ -113,13 +113,15 @@ def channelattention():
         'optimizer_options': {
             'lr' : 1e-3
         },
-        'train_schedulers': torch.optim.lr_scheduler.CosineAnnealingWarmRestarts,
+        'train_schedulers': CosineAnnealingWarmUpRestarts,
         'train_scheduler_options': 
             {
-                'T_0' : 10, 
-                'T_mult' : 1,
-                'eta_min':1e-8,
+                'T_0' : 15,
+                'T_mult' : 5,
+                'T_up': 2,
+                'eta_max': 0.001,
                 'last_epoch':-1,
+                'gamma': 0.5
             },
         
     }
