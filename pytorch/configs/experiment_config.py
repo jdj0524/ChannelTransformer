@@ -69,7 +69,7 @@ def channeltransformer():
         'train_scheduler_options': 
             {
                 'T_0' : 15,
-                'T_mult' : 5,
+                'T_mult' : 1.2,
                 'T_up': 2,
                 'eta_max': 0.001,
                 'last_epoch':-1,
@@ -117,7 +117,7 @@ def channelattention():
         'train_scheduler_options': 
             {
                 'T_0' : 15,
-                'T_mult' : 5,
+                'T_mult' : 1.2,
                 'T_up': 2,
                 'eta_max': 0.001,
                 'last_epoch':-1,
