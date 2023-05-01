@@ -204,10 +204,13 @@ class ChannelTransformerSimple(torch.nn.Module):
         super().__init__(*args, **kwargs)
         self.tx_model = ChannelTransformerTransmitterSimple(n_blocks=3, d_model=d_model, nhead=nhead, dim_feedforward=dim_feedforward, n_tx=n_tx, n_rx = n_rx, n_carrier=n_carrier, dim_feedback=dim_feedback)
         self.rx_model = ChannelTransformerReceiver(n_blocks=n_blocks, d_model=d_model, nhead=nhead, dim_feedforward=dim_feedforward, n_tx=n_tx, n_rx = n_rx, n_carrier=n_carrier, dim_feedback=dim_feedback)
+        self.name = self.__class__.__name__ + '_' + str(dim_feedback)
         
     def forward(self, x: torch.Tensor):
         x = rearrange(x, 'b ntx nrx c complex -> b ntx nrx (c complex)')
         x = self.tx_model(x)
         x = self.rx_model(x)
         return x
+    def get_save_name(self):
+        return self.name
         

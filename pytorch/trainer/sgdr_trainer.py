@@ -1,10 +1,11 @@
 from .base_trainer import BaseTrainer
 import torch
+import numpy as np
 
 class SGDR_Trainer(BaseTrainer):
-    def __init__(self, epochs, model, loaders, loss, optimizer_cls, gpu, metrics, options) -> None:
-        super().__init__(epochs, model, loaders, loss, optimizer_cls, gpu, metrics, options)
-        self.iters = len(self.loaders['train'])
+    def __init__(self, epochs, model, loss, optimizer_cls, gpu, metrics, options) -> None:
+        super().__init__(epochs, model, loss, optimizer_cls, gpu, metrics, options)
+        
 
     def train_step(self, epoch):
         step_losses = []
@@ -18,10 +19,11 @@ class SGDR_Trainer(BaseTrainer):
             step_loss.backward()
             self.optimizer.step()
             self.scheduler.step(epoch + i / self.iters)
+        self.eval_metric_history['train_loss'].append(np.mean(step_losses))
     
     def build_optimizer(self):
         super().build_optimizer()
-        self.scheduler = self.optimizer['train_schedulers'](
+        self.scheduler = self.options['train_schedulers'](
             optimizer = self.optimizer, **self.options['train_scheduler_options']
             )
         

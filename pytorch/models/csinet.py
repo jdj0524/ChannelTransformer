@@ -56,6 +56,7 @@ class SelfAttention2D(torch.nn.Module):
 class CSINet(torch.nn.Module):
     def __init__(self, dim_feedback, n_tx, n_rx, n_carrier, no_blocks, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+        self.name = self.__class__.__name__ + '_' + str(dim_feedback)
         self.n_tx = n_tx
         self.n_rx = n_rx
         self.c = n_carrier
@@ -66,7 +67,8 @@ class CSINet(torch.nn.Module):
         self.out_activation = torch.nn.Tanh()
         for i in range(no_blocks):
             self.resblocks.append(ResBlock(in_channels=2, out_channels=2))
-    
+    def get_save_name(self):
+        return self.name
     def forward(self,x):
         x = rearrange(x, 'b ntx nrx c complex -> b complex c (ntx nrx) ')
         x = self.input_conv(x)
@@ -83,6 +85,7 @@ class CSINet(torch.nn.Module):
 class ChannelAttention(torch.nn.Module):
     def __init__(self, dim_feedback, n_tx, n_rx, n_carrier, no_blocks, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+        self.name = self.__class__.__name__ + '_' + str(dim_feedback)
         self.n_tx = n_tx
         self.n_rx = n_rx
         self.c = n_carrier
@@ -104,6 +107,8 @@ class ChannelAttention(torch.nn.Module):
         self.attention_2 = SelfAttention2D(channels = 2)
         
         self.in_activation = torch.nn.Tanh()
+    def get_save_name(self):
+        return self.name
     def forward(self,x):
         x = rearrange(x, 'b ntx nrx c complex -> b complex c (ntx nrx) ')
         # x = self.input_conv(x)

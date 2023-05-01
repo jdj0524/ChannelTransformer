@@ -17,7 +17,7 @@ from fvcore.nn import flop_count, FlopCountAnalysis
 # from distributed.distributed import setup_ddp, cleanup
 
 # torch.utils.data.random_split(data, lengths = [0.7, 0.1, 0.2])
-gpu = 0
+gpu = 1
 
 print("O1_140")
 
