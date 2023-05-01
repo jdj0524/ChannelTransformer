@@ -21,7 +21,7 @@ def channeltransformer_full():
     return configs
 
 def channelattention_full():
-    proto_config = channeltransformer()
+    proto_config = channelattention()
     configs = []
     feedback_lengths = [8,16,32,64,128,256]
     for l in feedback_lengths:
@@ -85,7 +85,7 @@ def channelattention():
     trainer = SGDR_Trainer
     data = DeepMIMOSampleDataset
     options = {
-        'wandb_project_name': 'channeltransformer',
+        'wandb_project_name': 'channelattention',
         'save_dir': '/home/jdj0524/projects/ChannelTransformer/checkpoints/',
         'batch_size': 128,
         'data_options': {
@@ -97,7 +97,7 @@ def channelattention():
             'test': 0.2
         },
         'model_options': {
-            'n_blocks':3,
+            'no_blocks':3,
             'n_tx':16, 'n_rx':16, 'n_carrier':128, 'dim_feedback':32
         },
         'trainer_options': {
