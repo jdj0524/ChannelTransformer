@@ -67,14 +67,18 @@ class BaseTrainer(Trainer):
         for key in self.metrics.keys():
             test_metrics[key] = []
         test_metrics['loss'] = []
-
+        test_times = []
         for data in self.loaders['test']:
             self.best_model.eval()
             data = data.to(self.gpu)
+            start = time.time()
             output = self.best_model(data).detach()
+            end = time.time
+            test_times.append(end-start)
             for key in self.metrics.keys():
                 test_metrics[key].append(self.metrics[key](output, data).mean().cpu().numpy())
             test_metrics['loss'] = self.loss(output, data).mean().cpu().numpy()
-            
+        
+        wandb.run.summary['batch_inference_time'] = np.mean(test_times)
         for key in test_metrics.keys():
             wandb.run.summary['test_'+key] = np.mean(test_metrics[key])
