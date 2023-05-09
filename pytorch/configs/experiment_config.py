@@ -12,7 +12,8 @@ from copy import deepcopy
 def channeltransformer_full():
     proto_config = channeltransformer()
     configs = []
-    feedback_lengths = [8,16,32,64,128,256]
+    # feedback_lengths = [8,16,32,64,128,256]
+    feedback_lengths = [256, 128, 64, 32, 16, 8]
     for l in feedback_lengths:
         cur_config = deepcopy(proto_config)
         cur_config[0][4]['model_options']['dim_feedback'] = l
@@ -23,7 +24,7 @@ def channeltransformer_full():
 def channelattention_full():
     proto_config = channelattention()
     configs = []
-    feedback_lengths = [8,16,32,64,128,256]
+    feedback_lengths = [8,16,32,64,128]
     for l in feedback_lengths:
         cur_config = deepcopy(proto_config)
         cur_config[0][4]['model_options']['dim_feedback'] = l
@@ -34,12 +35,12 @@ def channelattention_full():
 def channeltransformer():
     launcher = BaseLauncher
     model = ChannelTransformerSimple
-    trainer = SGDR_Trainer
+    trainer = BaseTrainer
     data = DeepMIMOSampleDataset
     options = {
         'wandb_project_name': 'channeltransformer',
         'save_dir': '/home/jdj0524/projects/ChannelTransformer/checkpoints/',
-        'batch_size': 128,
+        'batch_size': 512,
         'data_options': {
             'files_dir':'/home/jdj0524/DeepMIMO_Datasets/O1_140/samples/'
         },
@@ -50,10 +51,10 @@ def channeltransformer():
         },
         'model_options': {
             'n_blocks':3, 'd_model':256, 'nhead':4, 'dim_feedforward':1024, 
-            'n_tx':16, 'n_rx':16, 'n_carrier':128, 'dim_feedback':32
+            'n_tx':16, 'n_rx':16, 'n_carrier':128, 'dim_feedback':8
         },
         'trainer_options': {
-            'epochs' : 300, 
+            'epochs' : 500, 
             'loss' : MSE_loss,
              'optimizer_cls' : torch.optim.AdamW,
              'gpu' : 0, 
@@ -63,7 +64,7 @@ def channeltransformer():
              },
         },
         'optimizer_options': {
-            'lr' : 1e-9
+            'lr' : 5e-4
         },
         'train_schedulers': CosineAnnealingWarmUpRestarts,
         'train_scheduler_options': 
@@ -71,9 +72,9 @@ def channeltransformer():
                 'T_0' : 15,
                 'T_mult' : 2,
                 'T_up': 2,
-                'eta_max': 0.001,
+                'eta_max': 0.002,
                 'last_epoch':-1,
-                'gamma': 0.5
+                'gamma': 0.8
             },
         
     }
@@ -82,10 +83,10 @@ def channeltransformer():
 def channelattention():
     launcher = BaseLauncher
     model = ChannelAttention
-    trainer = SGDR_Trainer
+    trainer = BaseTrainer
     data = DeepMIMOSampleDataset
     options = {
-        'wandb_project_name': 'channelattention',
+        'wandb_project_name': 'channeltransformer',
         'save_dir': '/home/jdj0524/projects/ChannelTransformer/checkpoints/',
         'batch_size': 128,
         'data_options': {
@@ -101,7 +102,7 @@ def channelattention():
             'n_tx':16, 'n_rx':16, 'n_carrier':128, 'dim_feedback':32
         },
         'trainer_options': {
-            'epochs' : 300, 
+            'epochs' : 200, 
             'loss' : MSE_loss,
              'optimizer_cls' : torch.optim.AdamW,
              'gpu' : 0, 
@@ -111,12 +112,12 @@ def channelattention():
              },
         },
         'optimizer_options': {
-            'lr' : 1e-3
+            'lr' : 5e-4
         },
         'train_schedulers': CosineAnnealingWarmUpRestarts,
         'train_scheduler_options': 
             {
-                'T_0' : 15,
+                'T_0' : 30,
                 'T_mult' : 2,
                 'T_up': 2,
                 'eta_max': 0.001,

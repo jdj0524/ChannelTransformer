@@ -94,7 +94,7 @@ class ChannelTransformerTransmitterSimple(torch.nn.Module):
         input_tensor = rearrange(input_tensor, 'b nrx ntx c -> b (c nrx ntx)')
         x = self.output_adapter(input_tensor)
         
-        x = x / torch.max(torch.abs(x), dim = 0, keepdim = True).values
+        x = x / torch.max(torch.abs(x), dim = 1, keepdim = True).values
         
         # x = self.output_activation(x)
         

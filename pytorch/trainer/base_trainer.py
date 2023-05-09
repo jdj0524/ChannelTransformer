@@ -22,9 +22,6 @@ class BaseTrainer(Trainer):
             step_loss.backward()
             self.optimizer.step()
         self.eval_metric_history['train_loss'].append(np.mean(step_losses))
-        
-        if self.scheduler is not None:
-            self.scheduler.step()
     
     def save_best_model(self, cur_loss):
         if self.best_loss is None or self.best_loss > cur_loss:
@@ -73,7 +70,7 @@ class BaseTrainer(Trainer):
             data = data.to(self.gpu)
             start = time.time()
             output = self.best_model(data).detach()
-            end = time.time
+            end = time.time()
             test_times.append(end-start)
             for key in self.metrics.keys():
                 test_metrics[key].append(self.metrics[key](output, data).mean().cpu().numpy())

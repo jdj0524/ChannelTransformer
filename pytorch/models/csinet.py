@@ -114,7 +114,7 @@ class ChannelAttention(torch.nn.Module):
         # x = self.input_conv(x)
         x = rearrange(x, 'b complex c nant -> b (complex c nant)')
         x = self.input_dense(x)
-        x = x / torch.max(torch.abs(x), dim = 0, keepdim = True).values
+        x = x / torch.max(torch.abs(x), dim = 1, keepdim = True).values
         x = self.output_dense(x)
         x = rearrange(x, 'b (complex c nant) -> b complex c nant', nant = self.n_tx * self.n_rx, c = self.c, complex = 2)
         x = self.input_block_1(x)
