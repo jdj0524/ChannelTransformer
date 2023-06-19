@@ -6,7 +6,7 @@ from copy import deepcopy
 import time
 
 class BaseTrainer(Trainer):
-    def __init__(self, epochs, model, loss, optimizer_cls, gpu, metrics, options) -> None:
+    def __init__(self, model, epochs, loss, optimizer_cls, gpu, metrics, options) -> None:
         super().__init__(model, epochs, loss, optimizer_cls, gpu, metrics, options)
         self.best_loss = None
         self.best_model = None
@@ -69,8 +69,9 @@ class BaseTrainer(Trainer):
             self.best_model.eval()
             data = data.to(self.gpu)
             start = time.time()
-            output = self.best_model(data).detach()
+            output = self.best_model(data)
             end = time.time()
+            output = output.detach()
             test_times.append(end-start)
             for key in self.metrics.keys():
                 test_metrics[key].append(self.metrics[key](output, data).mean().cpu().numpy())
