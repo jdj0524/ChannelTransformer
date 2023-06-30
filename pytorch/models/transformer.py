@@ -82,19 +82,25 @@ class ChannelTransformerTransmitterSimple(torch.nn.Module):
         self.n_rx = n_rx
         self.n_carrier = n_carrier
         
-        self.output_adapter = Linear(in_features=n_tx * n_rx * n_carrier * 2, out_features=dim_feedback)
-        # self.output_adapter = torch.nn.Sequential(
-        #     Linear(in_features=n_tx * n_rx * n_carrier * 2, out_features=dim_feedback*2),
-        #     torch.nn.BatchNorm1d(dim_feedback*2),
-        #     torch.nn.GELU(),
-        #     Linear(in_features=dim_feedback*2, out_features=dim_feedback)
-        # )
+        # self.output_adapter = Linear(in_features=n_tx * n_rx * n_carrier * 2, out_features=dim_feedback)
+        self.output_adapter = Linear(in_features=n_tx * n_rx * 2, out_features=dim_feedback)
+        self.output_activation = torch.nn.GELU()
+        self.output_adapter_2 = Linear(in_features=self.n_carrier, out_features=1)
+        
         
     def forward(self, input_tensor):
-        input_tensor = rearrange(input_tensor, 'b nrx ntx c -> b (c nrx ntx)')
+        # input_tensor = rearrange(input_tensor, 'b nrx ntx c complex -> b (c complex nrx ntx)')
+        input_tensor = rearrange(input_tensor, 'b nrx ntx c complex -> b c (nrx ntx complex)')
         x = self.output_adapter(input_tensor)
         
+        # x = x.mean(dim = 1)
+        x = self.output_activation(x)
+        x = rearrange(x, 'b c feedback_dim -> b feedback_dim c')
+        x = torch.squeeze(self.output_adapter_2(x))
+        
         x = x / torch.max(torch.abs(x), dim = 1, keepdim = True).values
+        
+        
         
         # x = self.output_activation(x)
         
@@ -147,7 +153,85 @@ class ChannelTransformerReceiver(torch.nn.Module):
         # out = self.output_activation(out)
         
         return out
+
+class ChannelTransformerTransmitterSimpleV2(torch.nn.Module):
+    def __init__(self, n_blocks, d_model, nhead, dim_feedforward, n_tx, n_rx, n_carrier, dim_feedback, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.n_tx = n_tx
+        self.n_rx = n_rx
+        self.n_carrier = n_carrier
         
+        # self.output_adapter = Linear(in_features=n_tx * n_rx * n_carrier * 2, out_features=dim_feedback)
+        self.output_adapter = Linear(in_features=n_tx * n_rx * 2, out_features=dim_feedback)
+        self.activation = torch.nn.GELU()
+        self.output_adapter_2 = Linear(in_features=self.n_carrier, out_features=1)
+        
+        
+    def forward(self, input_tensor):
+        # input_tensor = rearrange(input_tensor, 'b nrx ntx c complex -> b (c complex nrx ntx)')
+        input_tensor = rearrange(input_tensor, 'b nrx ntx c complex -> b c (nrx ntx complex)')
+        x = self.output_adapter(input_tensor)
+        x = self.activation(x)
+        # x = x.mean(dim = 1)
+        
+        x = rearrange(x, 'b c feedback_dim -> b feedback_dim c')
+        x = torch.squeeze(self.output_adapter_2(x))
+        
+        x = x / torch.max(torch.abs(x), dim = 1, keepdim = True).values
+        
+        
+        
+        # x = self.output_activation(x)
+        
+        return x
+        
+
+class ChannelTransformerReceiverV2(torch.nn.Module):
+    def __init__(self, n_blocks, d_model, nhead, dim_feedforward, n_tx, n_rx, n_carrier, dim_feedback, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.n_tx = n_tx
+        self.n_rx = n_rx
+        self.n_carrier = n_carrier
+        
+        self.encoders = torch.nn.ModuleList()
+        for i in range(n_blocks):
+            self.encoders.append(
+                TransformerEncoderLayer(
+                    d_model = d_model,
+                    nhead = nhead,
+                    dim_feedforward = dim_feedforward,
+                    activation = "gelu",
+                    batch_first = True
+                )
+            )
+            
+        self.input_adapter = Linear(in_features=dim_feedback, out_features=d_model)
+        self.output_adapter = Linear(in_features=d_model, out_features=n_tx * n_rx * 2)
+        self.output_activation = torch.nn.GELU()
+        self.output_adapter_2 = Linear(in_features=n_carrier, out_features=n_carrier)
+        self.positional_emb = PositionalEmbedding(d_model = d_model, sequence_len=n_carrier)
+        
+    def forward(self, input_tensor):
+        input_tensor = self.input_adapter(input_tensor)
+        
+        batch_size, _ = input_tensor.shape
+        input_tensor = repeat(input_tensor, 'b e -> b n e', n = self.n_carrier).clone()
+        x = self.positional_emb(input_tensor, batch_size = batch_size)
+        
+        for enc in self.encoders:
+            x = enc(x)
+        
+        # x = rearrange(x, 'b model_dim ncarrier -> b ncarrier model_dim')
+        x = self.output_adapter(x)
+        x = self.output_activation(x)
+        x = rearrange(x, 'b ncarrier dout -> b dout ncarrier')
+        x = self.output_adapter_2(x)
+        
+        out = rearrange(x, 'b (ntx nrx complex) ncarrier -> b nrx ntx ncarrier complex', ntx=self.n_tx, nrx=self.n_rx, ncarrier=self.n_carrier, complex = 2)
+        # out = self.output_activation(out)
+        
+        return out
+                
         
         
 class ChannelTransformerReceiverSimple(torch.nn.Module):
@@ -207,7 +291,20 @@ class ChannelTransformerSimple(torch.nn.Module):
         self.name = self.__class__.__name__ + '_' + str(dim_feedback)
         
     def forward(self, x: torch.Tensor):
-        x = rearrange(x, 'b ntx nrx c complex -> b ntx nrx (c complex)')
+        x = self.tx_model(x)
+        x = self.rx_model(x)
+        return x
+    def get_save_name(self):
+        return self.name
+
+class ChannelTransformerSimpleV2(torch.nn.Module):
+    def __init__(self, n_blocks, d_model, nhead, dim_feedforward, n_tx, n_rx, n_carrier, dim_feedback, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.tx_model = ChannelTransformerTransmitterSimpleV2(n_blocks=3, d_model=d_model, nhead=nhead, dim_feedforward=dim_feedforward, n_tx=n_tx, n_rx = n_rx, n_carrier=n_carrier, dim_feedback=dim_feedback)
+        self.rx_model = ChannelTransformerReceiverV2(n_blocks=n_blocks, d_model=d_model, nhead=nhead, dim_feedforward=dim_feedforward, n_tx=n_tx, n_rx = n_rx, n_carrier=n_carrier, dim_feedback=dim_feedback)
+        self.name = self.__class__.__name__ + '_' + str(dim_feedback)
+        
+    def forward(self, x: torch.Tensor):
         x = self.tx_model(x)
         x = self.rx_model(x)
         return x

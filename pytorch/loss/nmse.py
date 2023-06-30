@@ -3,7 +3,11 @@ from torch.linalg import matrix_norm
 from einops import rearrange
 
 def MSE_loss(output, target):
-    mse = torch.sum((output - target) ** 2, dim = (1,2))
+    mse = torch.mean((output - target) ** 2)
+    # output = output[:,:,:,:,0] + 1j * output[:,:,:,:,1]
+    # target = target[:,:,:,:,0] + 1j * target[:,:,:,:,1]
+    
+    # mse = (torch.abs(output - target)**2).mean()
     return mse
 
 def NMSE_loss(output, target):
@@ -11,11 +15,11 @@ def NMSE_loss(output, target):
     output = output[:,:,:,:,0] + 1j * output[:,:,:,:,1]
     target = target[:,:,:,:,0] + 1j * target[:,:,:,:,1]
     
-    mse = (torch.abs(output - target)**2).sum(dim = (1,2))
+    mse = (torch.abs(output - target)**2).sum(dim = (1,2,3))
     
-    power = torch.sum(torch.abs(target) ** 2, dim = (1,2))
+    power = torch.sum(torch.abs(target) ** 2, dim = (1,2,3))
     nmse = mse / power
-    return nmse.mean(dim = 1)
+    return nmse
 
 def Cosine_distance(output, target):
     channel_dim = output.shape[-1] // 2

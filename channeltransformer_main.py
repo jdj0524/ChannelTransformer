@@ -8,6 +8,9 @@ Options:
 
 from pytorch.configs.experiment_config import *
 from docopt import docopt
+import torch
+
+torch.manual_seed(42)
 if __name__ == '__main__':
     args = docopt(__doc__)
     configs = eval(args['--config'])()

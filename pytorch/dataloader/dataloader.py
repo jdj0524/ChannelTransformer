@@ -45,11 +45,14 @@ class DeepMIMOSampleDataset(torch.utils.data.Dataset):
     def __getitem__(self,idx):
         cur_data =np.load(os.path.join(self.files_dir, self.data[idx]+'.npy'))
         
-        cur_data = cur_data / (np.abs(cur_data).max(keepdims = True) + 1e-9)
+        # cur_data = cur_data / (np.abs(cur_data).max(keepdims = True) + 1e-9)
         
-        # cur_data = cur_data / np.abs(cur_data).mean(keepdims = True)
+        cur_data = cur_data / np.abs(cur_data).mean(keepdims = True)
         
-        cur_data = np.stack([cur_data.real, cur_data.imag], axis = -1)
+        # cur_data_abs = np.abs(cur_data)
+        # cur_data = (cur_data - cur_data.mean(keepdims = True)) / cur_data_abs.std(keepdims = True)
+        
+        cur_data = np.stack([cur_data.real, cur_data.imag], axis = -1).astype(np.float32)
         
         return cur_data
     
@@ -90,3 +93,59 @@ class DeepMIMOMultiuserDataset(torch.utils.data.Dataset):
             tensors.append(cur_data)
         tensors = rearrange(tensors, 'users nrx ntx complex -> users nrx ntx complex')
         return tensors
+    
+class DeepMIMOMultiuserDataset_Single(torch.utils.data.Dataset):
+    def __init__(
+        self, files_dir = '/mnt/d/DeepMIMO_datasets/O1_3p5/samples/', 
+        max_users = 16
+        ) -> None:
+        super().__init__()
+        self.files_dir = files_dir
+        self.data = None
+        self.max_users = max_users
+        self.build()
+        
+    def build(self):
+        self.data = np.load(self.files_dir + 'filepath.npy')
+        print('file walk complete')
+        
+    def __len__(self):
+        return len(self.data)    
+
+    def __getitem__(self,idx):
+        cur_data =np.load(os.path.join(self.files_dir, self.data[idx]+'.npy'))
+        cur_data = (cur_data / np.sqrt((cur_data*cur_data.conj()).sum(axis=(-1,-2), keepdims=True))).squeeze()
+        cur_data = np.stack([cur_data.real, cur_data.imag], axis = -1)
+        return cur_data
+    
+class DeepMIMOMultiuserNoiseDataset(torch.utils.data.Dataset):
+    def __init__(
+        self, files_dir = '/mnt/d/DeepMIMO_datasets/O1_3p5/samples/', 
+        max_users = 16, train_snr_range = [-10, 40],
+        ) -> None:
+        super().__init__()
+        self.files_dir = files_dir
+        self.data = None
+        self.max_users = max_users
+        self.train_snr_range = train_snr_range
+        self.build()
+        
+    def build(self):
+        self.data = np.load(self.files_dir + 'filepath.npy')
+        print('file walk complete')
+        
+    def snr_to_sigma(self, snr):
+        return 1/10**(snr / 10)
+    
+    def __len__(self):
+        return len(self.data)    
+
+    def __getitem__(self,idx):
+        cur_data =np.load(os.path.join(self.files_dir, self.data[idx]+'.npy'))
+        cur_data = (cur_data / np.sqrt((cur_data*cur_data.conj()).sum(axis=(-1,-2), keepdims=True))).squeeze()
+        cur_data = np.stack([cur_data.real, cur_data.imag], axis = -1).astype(np.float32)
+        snr = np.random.uniform(low = self.train_snr_range[0], high = self.train_snr_range[1])
+        sigma = np.float32(self.snr_to_sigma(snr))
+        
+        
+        return cur_data, sigma

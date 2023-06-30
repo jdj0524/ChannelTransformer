@@ -25,7 +25,8 @@ class BaseLauncher(Launcher):
                  split_data[i],
                  batch_size=self.options['batch_size'],
                  shuffle = key == 'train',
-                 num_workers=4
+                 num_workers=4,
+                 drop_last=True,
                  )
     
     def build_model(self):
