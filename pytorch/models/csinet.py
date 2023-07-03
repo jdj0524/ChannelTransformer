@@ -89,7 +89,7 @@ class CSINet(torch.nn.Module):
         real = self.out_conv_1(x)
         imag = self.out_conv_2(x)
         # x = rearrange(x, 'b complex c (ntx nrx) -> b ntx nrx c complex', ntx = self.n_tx, nrx = self.n_rx, c = self.c, complex = 2)
-        x = rearrange([real, imag], 'complex b 1 c (ntx nrx) -> b ntx nrx c complex', ntx = self.n_tx, nrx = self.n_rx, c = self.c, complex = 2)
+        x = rearrange([real, imag], 'complex b 1 c (ntx nrx) -> b nrx ntx c complex', ntx = self.n_tx, nrx = self.n_rx, c = self.c, complex = 2)
         
         # x = self.out_activation(x)
         return x
@@ -104,19 +104,19 @@ class ChannelAttention(torch.nn.Module):
         self.input_conv = torch.nn.Conv2d(in_channels=2, out_channels=2, kernel_size=(3,3), padding = 'same')
         self.input_dense = torch.nn.Linear(in_features=n_tx*n_rx*n_carrier*2, out_features=dim_feedback)
         self.output_dense = torch.nn.Linear(in_features=dim_feedback, out_features=n_tx*n_rx*n_carrier*2)
-        self.input_block_1 = ResBlock(in_channels=2, out_channels=4)
-        self.input_block_2 = ResBlock(in_channels=4, out_channels=4)
-        self.input_block_3 = ResBlock(in_channels=4, out_channels=4)
+        self.input_block_1 = ResBlock(in_channels=2, out_channels=2)
+        self.input_block_2 = ResBlock(in_channels=2, out_channels=2)
+        self.input_block_3 = ResBlock(in_channels=2, out_channels=2)
         # self.input_block_4 = ResBlock(in_channels=2, out_channels=2)
         # self.input_block_5 = ResBlock(in_channels=2, out_channels=2)
         # self.input_block_6 = ResBlock(in_channels=2, out_channels=2)
         # self.input_block_7 = ResBlock(in_channels=2, out_channels=2)
         # self.input_block_4 = ResBlock(in_channels=32, out_channels=2)
-        self.out_conv_1 = torch.nn.Conv2d(in_channels=4, out_channels=1, kernel_size=(3,3), padding='same')
-        self.out_conv_2 = torch.nn.Conv2d(in_channels=4, out_channels=1, kernel_size=(3,3), padding='same')
+        self.out_conv_1 = torch.nn.Conv2d(in_channels=2, out_channels=1, kernel_size=(3,3), padding='same')
+        self.out_conv_2 = torch.nn.Conv2d(in_channels=2, out_channels=1, kernel_size=(3,3), padding='same')
         
-        self.attention_1 = SelfAttention2D(channels = 4)
-        self.attention_2 = SelfAttention2D(channels = 4)
+        self.attention_1 = SelfAttention2D(channels = 2)
+        self.attention_2 = SelfAttention2D(channels = 2)
         
         self.in_activation = torch.nn.Tanh()
     def get_save_name(self):
@@ -140,7 +140,7 @@ class ChannelAttention(torch.nn.Module):
         
         x = torch.cat([real,imag], dim=1)
         # x = self.input_block_4(x)
-        x = rearrange(x, 'b complex c (ntx nrx) -> b ntx nrx c complex', ntx = self.n_tx, nrx = self.n_rx, c = self.c, complex = 2)
+        x = rearrange(x, 'b complex c (ntx nrx) -> b nrx ntx c complex', ntx = self.n_tx, nrx = self.n_rx, c = self.c, complex = 2)
         # x = self.out_activation(x)
         return x
         

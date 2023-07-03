@@ -15,11 +15,11 @@ def NMSE_loss(output, target):
     output = output[:,:,:,:,0] + 1j * output[:,:,:,:,1]
     target = target[:,:,:,:,0] + 1j * target[:,:,:,:,1]
     
-    mse = (torch.abs(output - target)**2).sum(dim = (1,2,3))
+    mse = (torch.abs(output - target)**2).sum(dim = (1,2))
     
-    power = torch.sum(torch.abs(target) ** 2, dim = (1,2,3))
+    power = torch.sum(torch.abs(target) ** 2, dim = (1,2))
     nmse = mse / power
-    return nmse
+    return nmse.mean(dim = 1)
 
 def Cosine_distance(output, target):
     channel_dim = output.shape[-1] // 2

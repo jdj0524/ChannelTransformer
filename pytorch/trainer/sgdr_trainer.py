@@ -3,8 +3,8 @@ import torch
 import numpy as np
 
 class SGDR_Trainer(BaseTrainer):
-    def __init__(self, epochs, model, loss, optimizer_cls, gpu, metrics, options) -> None:
-        super().__init__(epochs, model, loss, optimizer_cls, gpu, metrics, options)
+    def __init__(self, model, epochs, loss, optimizer_cls, gpu, metrics, options) -> None:
+        super().__init__(model, epochs, loss, optimizer_cls, gpu, metrics, options)
         
 
     def train_step(self, epoch):
