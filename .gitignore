@@ -6,4 +6,5 @@
 *.txt
 wandb/*
 checkpoints/*
+checkpoints_cost2100/*
 pytorch/__pycache__/__init__.cpython-310.pyc
