@@ -14,7 +14,7 @@ class SGDR_Trainer(BaseTrainer):
             data = data.to(self.gpu)
             output = self.model(data)
             step_loss = self.loss(output, data).mean()
-            step_losses.append(step_loss.detach().cpu())
+            step_losses.append(step_loss.detach().cpu().float())
             self.optimizer.zero_grad()
             step_loss.backward()
             self.optimizer.step()

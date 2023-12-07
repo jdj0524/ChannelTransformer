@@ -4,10 +4,8 @@ from einops import rearrange
 
 def MSE_loss(output, target):
     mse = torch.mean((output - target) ** 2)
-    # output = output[:,:,:,:,0] + 1j * output[:,:,:,:,1]
-    # target = target[:,:,:,:,0] + 1j * target[:,:,:,:,1]
+    # mse = torch.sum((output - target) ** 2, dim = (1,2))
     
-    # mse = (torch.abs(output - target)**2).mean()
     return mse
 
 def NMSE_loss(output, target):

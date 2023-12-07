@@ -17,7 +17,7 @@ class BaseTrainer(Trainer):
             data = data.to(self.gpu)
             output = self.model(data)
             step_loss = self.loss(output, data).mean()
-            step_losses.append(step_loss.detach().cpu().numpy())
+            step_losses.append(step_loss.detach().cpu().float().numpy())
             self.optimizer.zero_grad()
             step_loss.backward()
             self.optimizer.step()
@@ -29,9 +29,8 @@ class BaseTrainer(Trainer):
             self.best_model = deepcopy(self.model)
             torch.save(self.best_model.state_dict(), self.options['save_dir'] + self.best_model.get_save_name())
 
-    
     def train(self):
-        self.model = self.model.to(self.gpu)
+        self.model = self.model.to(device=self.gpu)
         for i in range(self.epochs):
             self.train_step(i)
             self.eval()
@@ -50,8 +49,8 @@ class BaseTrainer(Trainer):
             data = data.to(self.gpu)
             output = self.model(data).detach()
             for key in self.metrics.keys():
-                eval_metrics[key].append(self.metrics[key](output, data).mean().cpu().numpy())
-            eval_metrics['val_loss'] = self.loss(output, data).mean().cpu().numpy()
+                eval_metrics[key].append(self.metrics[key](output, data).mean().cpu().float().numpy())
+            eval_metrics['val_loss'] = self.loss(output, data).mean().cpu().float().numpy()
 
         for key in eval_metrics.keys():
             eval_metrics[key] = np.mean(eval_metrics[key])
@@ -74,8 +73,8 @@ class BaseTrainer(Trainer):
             output = output.detach()
             test_times.append(end-start)
             for key in self.metrics.keys():
-                test_metrics[key].append(self.metrics[key](output, data).mean().cpu().numpy())
-            test_metrics['loss'] = self.loss(output, data).mean().cpu().numpy()
+                test_metrics[key].append(self.metrics[key](output, data).mean().cpu().float().numpy())
+            test_metrics['loss'] = self.loss(output, data).mean().cpu().float().numpy()
         
         wandb.run.summary['batch_inference_time'] = np.mean(test_times)
         for key in test_metrics.keys():

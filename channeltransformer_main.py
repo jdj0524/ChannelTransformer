@@ -7,6 +7,7 @@ Options:
 """
 
 from pytorch.configs.experiment_config import *
+from pytorch.configs.m2_config import *
 from docopt import docopt
 import torch
 

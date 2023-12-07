@@ -49,10 +49,12 @@ class DeepMIMOSampleDataset(torch.utils.data.Dataset):
         
         cur_data = cur_data / np.abs(cur_data).mean(keepdims = True)
         
+        
         # cur_data_abs = np.abs(cur_data)
         # cur_data = (cur_data - cur_data.mean(keepdims = True)) / cur_data_abs.std(keepdims = True)
         
-        cur_data = np.stack([cur_data.real, cur_data.imag], axis = -1).astype(np.float32)
+        cur_data = np.stack([cur_data.real, cur_data.imag], axis = -1)
+        cur_data = torch.from_numpy(cur_data)#.bfloat16()
         
         return cur_data
     

@@ -43,6 +43,7 @@ class Trainer:
     
     def print_eval_metrics(self, epoch):
         print_string = ''
+        print_string += "epoch {}, ".format(epoch)
         wandb_dictionary = {}
         for key in self.eval_metric_history.keys():
             print_string += "{} : {}, ".format(key, self.eval_metric_history[key][-1])
